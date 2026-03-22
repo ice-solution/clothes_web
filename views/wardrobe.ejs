@@ -8,6 +8,18 @@
     <p class="mt-1 text-sm text-slate-400">掃描衣櫃 QR 後會開啟此頁，顯示已記錄的衣物。</p>
   </header>
 
+  <aside class="mb-8 rounded-2xl border border-amber-500/25 bg-amber-950/35 px-4 py-3 text-sm text-amber-100/95">
+    <p class="font-medium text-amber-200">如何新增或編輯衣物？</p>
+    <p class="mt-2 leading-relaxed text-amber-100/85">
+      此頁僅供瀏覽。新增／修改必須使用<strong class="text-amber-100">管理連結</strong>（網址形如
+      <code class="rounded bg-black/30 px-1 py-0.5 text-xs">/w/識別碼/manage?token=…</code>）。
+      建立衣櫃成功後瀏覽器會自動開啟該頁，請<strong>立刻加入書籤或複製網址</strong>保存。
+      若曾用同一裝置開過管理頁，可到<a href="/wardrobes" class="font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200">全部衣櫃</a>點衣櫃名稱嘗試進入編輯。
+      亦可使用<a href="/login" class="font-medium text-amber-300 underline underline-offset-2 hover:text-amber-200">管理員登入</a>後，從全部衣櫃進入各衣櫃管理頁編輯（不需 token）。
+      若未設定管理員帳號，管理連結遺失時需至資料庫查詢 <code class="text-xs">editToken</code>，或建立新衣櫃。
+    </p>
+  </aside>
+
   <section class="mb-10 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
     <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">以照片找相近衣物</h2>
     <p class="mt-1 text-xs text-slate-500">上傳一張照片，系統會在此衣櫃內比對視覺相似度（顏色／紋理概況）。</p>
@@ -28,7 +40,7 @@
   <section>
     <h2 class="mb-4 text-lg font-semibold text-white">衣櫃內衣物（<%= items.length %>）</h2>
     <% if (items.length === 0) { %>
-      <p class="rounded-xl border border-dashed border-white/15 bg-slate-900/50 px-4 py-8 text-center text-slate-500">尚無衣物，請由管理員在管理頁新增。</p>
+      <p class="rounded-xl border border-dashed border-white/15 bg-slate-900/50 px-4 py-8 text-center text-slate-500">尚無衣物。請使用<strong class="text-slate-400">管理連結</strong>（含 token）開啟管理頁後再上傳；僅有此公開頁無法新增。</p>
     <% } else { %>
       <ul class="grid gap-4 sm:grid-cols-2">
         <% items.forEach(function (item) { %>

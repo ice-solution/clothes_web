@@ -10,7 +10,7 @@
 
   <section class="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur">
     <h2 class="text-lg font-semibold text-white">建立新衣櫃</h2>
-    <p class="mt-1 text-sm text-slate-400">建立後會顯示管理頁與 QR 碼，請妥善保存管理連結。</p>
+    <p class="mt-1 text-sm text-slate-400">建立後會顯示管理頁與 QR 碼。<strong class="font-medium text-slate-300">請務必將網址列含 <code class="rounded bg-white/10 px-1">?token=</code> 的完整連結加入書籤</strong>；遺失後無法從公開頁新增衣物。</p>
     <form action="/wardrobes" method="post" class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end">
       <div class="flex-1">
         <label for="name" class="block text-sm font-medium text-slate-300">衣櫃名稱（選填）</label>
@@ -25,6 +25,6 @@
   </section>
 
   <p class="mt-8 text-center text-xs text-slate-500">
-    技術棧：Express · MongoDB · Tailwind CSS · 圖像平均雜湊相似搜尋
+    右上角可 <a href="/login" class="text-indigo-400 hover:text-indigo-300">管理員登入</a>，登入後可編輯所有衣櫃（免 token）。技術棧：Express · MongoDB · Session · Tailwind CSS
   </p>
 <%- include('partials/foot') %>

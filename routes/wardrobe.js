@@ -22,6 +22,17 @@ async function loadWardrobeByCode(code, withToken = false) {
 
 async function assertManage(req, res, next) {
   const { code } = req.params;
+  if (req.session && req.session.userId) {
+    const w = await Wardrobe.findOne({ shortCode: code });
+    if (!w) {
+      if (req.accepts('html')) {
+        return res.status(404).render('error', { title: '找不到', message: '此衣櫃不存在' });
+      }
+      return res.status(404).json({ error: '衣櫃不存在' });
+    }
+    req.wardrobe = w;
+    return next();
+  }
   const token =
     req.body?.editToken ||
     req.query?.token ||
@@ -65,6 +76,7 @@ router.get('/wardrobes', async (req, res) => {
     title: '全部衣櫃',
     wardrobes: list,
     baseUrlStr: baseUrl(req),
+    loggedIn: !!(req.session && req.session.userId),
   });
 });
 
@@ -91,14 +103,31 @@ router.get('/w/:code', async (req, res) => {
   });
 });
 
-/** 管理頁 */
+/** 管理頁（已登入管理員免 token；否則需 ?token=） */
 router.get('/w/:code/manage', async (req, res) => {
   const { code } = req.params;
   const token = req.query.token;
-  const w = await loadWardrobeByCode(code, true);
-  if (!w || !token || w.editToken !== token) {
-    return res.status(403).render('error', { title: '無法管理', message: '請使用建立衣櫃時提供的完整管理連結' });
+  const w = await Wardrobe.findOne({ shortCode: code });
+  if (!w) {
+    return res.status(404).render('error', { title: '找不到', message: '此衣櫃不存在或已刪除' });
   }
+
+  const loggedIn = !!(req.session && req.session.userId);
+  let tokenOk = false;
+  if (token) {
+    const wTok = await loadWardrobeByCode(code, true);
+    tokenOk = !!(wTok && wTok.editToken === token);
+  }
+
+  if (!loggedIn && !tokenOk) {
+    const nextQ = encodeURIComponent(req.originalUrl);
+    return res.status(403).render('error', {
+      title: '無法管理',
+      messageHtml: `<span class="text-slate-300">請 <a href="/login?next=${nextQ}" class="font-medium text-indigo-300 underline hover:text-indigo-200">登入管理員帳號</a>，或使用建立衣櫃時提供的完整管理連結（含 token）。</span>`,
+    });
+  }
+
+  const wFull = await loadWardrobeByCode(code, true);
   const items = await ClothingItem.find({ wardrobeId: w._id }).sort({ updatedAt: -1 });
   const listUrl = `${baseUrl(req)}/w/${code}`;
   let qrDataUrl = '';
@@ -107,11 +136,21 @@ router.get('/w/:code/manage', async (req, res) => {
   } catch (e) {
     qrDataUrl = '';
   }
+
+  const sessionAuth = loggedIn;
+  const editTokenForClient = sessionAuth ? '' : token;
+  const shareManageUrl =
+    sessionAuth && wFull
+      ? `${baseUrl(req)}/w/${code}/manage?token=${encodeURIComponent(wFull.editToken)}`
+      : '';
+
   res.render('manage', {
     title: `管理 · ${w.name}`,
     wardrobe: w,
     items,
-    editToken: token,
+    editToken: editTokenForClient,
+    sessionAuth,
+    shareManageUrl,
     listUrl,
     qrDataUrl,
     baseUrlStr: baseUrl(req),
@@ -145,6 +184,9 @@ router.post('/api/w/:code/items', upload.single('image'), assertManage, async (r
       imageHash,
     });
     if (req.accepts('html')) {
+      if (req.session && req.session.userId) {
+        return res.redirect(`/w/${req.params.code}/manage`);
+      }
       return res.redirect(`/w/${req.params.code}/manage?token=${encodeURIComponent(req.body.editToken)}`);
     }
     res.json({ ok: true, item });

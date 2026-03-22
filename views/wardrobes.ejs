@@ -5,7 +5,7 @@
       <span class="text-slate-600">全部衣櫃</span>
     </div>
     <h1 class="mt-3 text-2xl font-bold text-white sm:text-3xl">全部衣櫃</h1>
-    <p class="mt-1 text-sm text-slate-400">依建立時間由新到舊排列；點選可開啟公開瀏覽頁（與掃描 QR 相同內容）。</p>
+    <p class="mt-1 text-sm text-slate-400">依建立時間由新到舊排列。已<a href="/login" class="text-indigo-300 hover:text-indigo-200">登入管理員</a>者，點<strong class="text-slate-300">名稱</strong>可進管理頁；否則依本機是否存過 token 決定（否則為公開頁）。「開啟」為公開頁。</p>
   </header>
 
   <% if (!wardrobes || wardrobes.length === 0) { %>
@@ -35,8 +35,12 @@
         <tbody class="divide-y divide-white/5">
           <% wardrobes.forEach(function (w) { %>
             <tr class="align-middle hover:bg-white/[0.03]">
-              <td class="py-5 pl-4 pr-4 text-left font-medium text-white sm:pl-5">
-                <span class="line-clamp-2"><%= w.name || '（未命名）' %></span>
+              <td class="py-5 pl-4 pr-4 text-left font-medium sm:pl-5">
+                <a href="<%= typeof loggedIn !== 'undefined' && loggedIn ? '/w/' + w.shortCode + '/manage' : '/w/' + w.shortCode %>"
+                  data-manage-code="<%= w.shortCode %>"
+                  class="wardrobe-name-link line-clamp-2 text-indigo-200 underline-offset-2 hover:text-white hover:underline">
+                  <%= w.name || '（未命名）' %>
+                </a>
               </td>
               <td class="max-w-0 px-4 py-5 text-left">
                 <span class="block truncate font-mono text-xs text-slate-400" title="<%= w.shortCode %>"><%= w.shortCode %></span>
@@ -63,5 +67,29 @@
     <p class="mt-4 px-1 text-center text-xs leading-relaxed text-slate-500 sm:px-0">
       公開網址範例：<span class="break-all text-slate-400"><%= baseUrlStr %>/w/&lt;識別碼&gt;</span>
     </p>
+    <script>
+      (function () {
+        var KEY = 'clothesWardrobeManageTokens';
+        var map = {};
+        var loggedIn = <%- JSON.stringify(typeof loggedIn !== 'undefined' && loggedIn) %>;
+        try {
+          map = JSON.parse(localStorage.getItem(KEY) || '{}');
+        } catch (e) {}
+        document.querySelectorAll('a[data-manage-code]').forEach(function (a) {
+          var c = a.getAttribute('data-manage-code');
+          var tok = c ? map[c] : '';
+          if (tok) {
+            a.href = '/w/' + encodeURIComponent(c) + '/manage?token=' + encodeURIComponent(tok);
+            a.setAttribute('title', '開啟管理／編輯（本機已存 token）');
+          } else if (loggedIn) {
+            a.href = '/w/' + encodeURIComponent(c) + '/manage';
+            a.setAttribute('title', '開啟管理／編輯（已登入）');
+          } else {
+            a.href = '/w/' + encodeURIComponent(c);
+            a.setAttribute('title', '公開瀏覽');
+          }
+        });
+      })();
+    </script>
   <% } %>
 <%- include('partials/foot') %>
