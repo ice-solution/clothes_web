@@ -22,10 +22,16 @@ const imageFilter = (_req, file, cb) => {
   else cb(new Error('只接受 JPEG、PNG、GIF、WebP 圖片'));
 };
 
+const MAX_IMAGE_BYTES = 8 * 1024 * 1024;
+const MAX_FILES_PER_UPLOAD = 24;
+
 const upload = multer({
   storage,
-  limits: { fileSize: 8 * 1024 * 1024 },
+  limits: { fileSize: MAX_IMAGE_BYTES, files: MAX_FILES_PER_UPLOAD },
   fileFilter: imageFilter,
 });
 
-module.exports = { upload, uploadDir };
+module.exports.MAX_FILES_PER_UPLOAD = MAX_FILES_PER_UPLOAD;
+
+module.exports.upload = upload;
+module.exports.uploadDir = uploadDir;

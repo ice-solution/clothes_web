@@ -47,8 +47,9 @@
       <% } %>
       <div>
         <label class="block text-sm font-medium text-slate-300">照片 <span class="text-red-400">*</span></label>
-        <input type="file" name="image" accept="image/*" required
-          class="mt-1 block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" />
+        <p class="mt-0.5 text-xs text-slate-500">可一次選多張（按住 Shift／Cmd 或 Ctrl 多選），每張會各建立一筆衣物；下方描述與放置位置會套用到每一張。</p>
+        <input type="file" name="image" accept="image/*" multiple required
+          class="mt-2 block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" />
       </div>
       <div>
         <label class="block text-sm font-medium text-slate-300">放置位置（選填）</label>
@@ -60,7 +61,7 @@
         <textarea name="description" rows="3" maxlength="500" placeholder="顏色、材質、季節…"
           class="mt-1 w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"></textarea>
       </div>
-      <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">加入衣櫃</button>
+      <button type="submit" class="rounded-xl bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-emerald-500">加入衣櫃（多張會一次全部上傳）</button>
     </form>
   </section>
 

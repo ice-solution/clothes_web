@@ -14,12 +14,19 @@
     <div class="absolute -left-32 top-0 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl"></div>
     <div class="absolute -right-32 bottom-0 h-96 w-96 rounded-full bg-fuchsia-600/15 blur-3xl"></div>
   </div>
-  <div class="relative z-10 mx-auto max-w-4xl px-4 py-10 pb-20">
-    <div class="mb-6 flex flex-wrap items-center justify-end gap-3 text-sm">
-      <% if (typeof currentUser !== 'undefined' && currentUser) { %>
-        <span class="text-slate-500"><%= currentUser %></span>
-        <a href="/logout" class="text-indigo-300 hover:text-indigo-200">登出</a>
-      <% } else { %>
-        <a href="/login" class="text-indigo-300 hover:text-indigo-200">管理員登入</a>
-      <% } %>
+  <div class="relative z-10 mx-auto max-w-6xl px-4 py-10 pb-20">
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-y-3 text-sm">
+      <nav class="flex flex-wrap items-center text-slate-400">
+        <a href="/" class="mr-5 inline-block py-1 hover:text-indigo-200">首頁</a>
+        <a href="/wardrobes" class="mr-5 inline-block py-1 hover:text-indigo-200">全部衣櫃</a>
+        <a href="/clothes" class="inline-block py-1 hover:text-indigo-200">所有衣服</a>
+      </nav>
+      <div class="flex flex-wrap items-center border-l border-transparent pl-0 sm:border-white/10 sm:pl-4">
+        <% if (typeof currentUser !== 'undefined' && currentUser) { %>
+          <span class="mr-4 inline-block text-slate-500"><%= currentUser %></span>
+          <a href="/logout" class="inline-block py-1 text-indigo-300 hover:text-indigo-200">登出</a>
+        <% } else { %>
+          <a href="/login" class="inline-block py-1 text-indigo-300 hover:text-indigo-200">管理員登入</a>
+        <% } %>
+      </div>
     </div>

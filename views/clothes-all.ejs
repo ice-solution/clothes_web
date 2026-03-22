@@ -1,0 +1,97 @@
+<%- include('partials/head') %>
+  <header class="mb-8">
+    <h1 class="text-2xl font-bold text-white sm:text-3xl">所有衣服</h1>
+    <p class="mt-1 text-sm text-slate-400">Gallery 每列固定 3 件（含手機）。點圖可放大預覽；點標題或「詳情」可看上傳時間與衣櫃。</p>
+  </header>
+
+  <% if (!items || items.length === 0) { %>
+    <div class="rounded-2xl border border-dashed border-white/15 bg-slate-900/50 px-6 py-14 text-center text-slate-500">
+      尚無任何衣物。請至各衣櫃<a href="/wardrobes" class="text-indigo-300 hover:text-indigo-200">管理頁</a>上傳。
+    </div>
+  <% } else { %>
+    <ul class="grid grid-cols-3 gap-1.5 sm:gap-3 md:gap-5">
+      <% items.forEach(function (it) { %>
+        <% var w = it.wardrobeId; %>
+        <% var dateStr = it.createdAt ? new Date(it.createdAt).toLocaleString('zh-Hant', { dateStyle: 'medium', timeStyle: 'short' }) : '—'; %>
+        <% var dateShort = it.createdAt ? new Date(it.createdAt).toLocaleDateString('zh-Hant') : '—'; %>
+        <li class="flex flex-col">
+          <article class="group flex h-full flex-col overflow-hidden rounded-lg border border-white/10 bg-slate-900/50 shadow-lg transition hover:border-indigo-500/30 hover:shadow-indigo-500/10 sm:rounded-2xl">
+            <div class="relative aspect-square w-full overflow-hidden bg-slate-800">
+              <button type="button"
+                class="gallery-zoom absolute right-0.5 top-0.5 z-20 rounded bg-black/55 px-1 py-0.5 text-[10px] text-white backdrop-blur sm:right-2 sm:top-2 sm:rounded-lg sm:px-2 sm:py-1 sm:text-xs md:opacity-0 md:transition md:group-hover:opacity-100 hover:bg-black/70"
+                data-gallery-src="/uploads/<%= it.imageFilename %>"
+                data-gallery-caption="<%= (w && w.name ? w.name : '衣物') %> · <%= dateShort %>"
+                aria-label="放大預覽">
+                放大
+              </button>
+              <a href="/clothes/<%= it._id %>" class="relative block h-full w-full">
+                <img src="/uploads/<%= it.imageFilename %>" alt=""
+                  class="h-full w-full object-cover transition duration-500 ease-out group-hover:scale-[1.03]"
+                  loading="lazy" />
+                <div class="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent opacity-0 transition duration-300 group-hover:opacity-100"></div>
+                <div class="pointer-events-none absolute inset-x-0 bottom-0 p-3 opacity-0 transition duration-300 group-hover:opacity-100">
+                  <p class="text-sm font-medium text-white drop-shadow"><%= w && w.name ? w.name : '（衣櫃已刪除）' %></p>
+                  <p class="mt-0.5 text-xs text-white/80 drop-shadow"><%= dateStr %></p>
+                </div>
+              </a>
+            </div>
+            <div class="flex flex-1 flex-col border-t border-white/5 p-1.5 sm:p-3">
+              <a href="/clothes/<%= it._id %>" class="line-clamp-2 min-h-0 text-[11px] font-medium leading-snug text-indigo-200 hover:text-white hover:underline sm:min-h-[2.5rem] sm:text-sm">
+                <%= w && w.name ? w.name : '（衣櫃已刪除）' %>
+              </a>
+              <p class="mt-0.5 truncate text-[10px] text-slate-500 sm:mt-1 sm:text-xs"><%= dateShort %></p>
+              <div class="mt-auto flex justify-end pt-1 sm:pt-2">
+                <a href="/clothes/<%= it._id %>" class="text-[10px] font-medium text-slate-400 hover:text-indigo-300 sm:text-xs">詳情 →</a>
+              </div>
+            </div>
+          </article>
+        </li>
+      <% }); %>
+    </ul>
+    <p class="mt-8 text-center text-xs text-slate-500">共 <%= items.length %> 件 · 每列 3 件</p>
+
+    <dialog id="gallery-lightbox" class="max-h-[90vh] max-w-[min(96vw,56rem)] rounded-2xl border border-white/10 bg-slate-950 p-0 text-slate-100 shadow-2xl backdrop:bg-black/80 open:flex open:flex-col">
+      <div class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+        <p id="gallery-lightbox-caption" class="min-w-0 flex-1 truncate text-sm text-slate-300"></p>
+        <button type="button" id="gallery-lightbox-close" class="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20">關閉</button>
+      </div>
+      <div class="flex max-h-[calc(90vh-4rem)] items-center justify-center overflow-auto p-4">
+        <img id="gallery-lightbox-img" src="" alt="" class="max-h-[min(75vh,720px)] w-auto max-w-full object-contain" />
+      </div>
+    </dialog>
+
+    <script>
+      (function () {
+        var dlg = document.getElementById('gallery-lightbox');
+        var img = document.getElementById('gallery-lightbox-img');
+        var cap = document.getElementById('gallery-lightbox-caption');
+        var btnClose = document.getElementById('gallery-lightbox-close');
+        if (!dlg || !img || !cap) return;
+
+        document.querySelectorAll('.gallery-zoom').forEach(function (btn) {
+          btn.addEventListener('click', function (e) {
+            e.preventDefault();
+            e.stopPropagation();
+            var src = btn.getAttribute('data-gallery-src');
+            var c = btn.getAttribute('data-gallery-caption') || '';
+            if (!src) return;
+            img.src = src;
+            img.alt = c;
+            cap.textContent = c;
+            dlg.showModal();
+          });
+        });
+
+        btnClose.addEventListener('click', function () {
+          dlg.close();
+        });
+        dlg.addEventListener('click', function (e) {
+          if (e.target === dlg) dlg.close();
+        });
+        document.addEventListener('keydown', function (e) {
+          if (e.key === 'Escape' && dlg.open) dlg.close();
+        });
+      })();
+    </script>
+  <% } %>
+<%- include('partials/foot') %>

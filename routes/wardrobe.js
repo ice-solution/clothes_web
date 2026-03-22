@@ -1,18 +1,16 @@
 const express = require('express');
 const fs = require('fs').promises;
 const path = require('path');
+const mongoose = require('mongoose');
 const QRCode = require('qrcode');
 const { nanoid } = require('nanoid');
 const Wardrobe = require('../models/Wardrobe');
 const ClothingItem = require('../models/ClothingItem');
-const { upload } = require('../middleware/upload');
+const { upload, MAX_FILES_PER_UPLOAD } = require('../middleware/upload');
 const { computeAverageHash, hammingDistance } = require('../lib/imageHash');
+const { publicBaseUrl } = require('../lib/publicBaseUrl');
 
 const router = express.Router();
-
-function baseUrl(req) {
-  return (process.env.BASE_URL || `${req.protocol}://${req.get('host')}`).replace(/\/$/, '');
-}
 
 async function loadWardrobeByCode(code, withToken = false) {
   const q = Wardrobe.findOne({ shortCode: code });
@@ -75,8 +73,36 @@ router.get('/wardrobes', async (req, res) => {
   res.render('wardrobes', {
     title: '全部衣櫃',
     wardrobes: list,
-    baseUrlStr: baseUrl(req),
+    baseUrlStr: publicBaseUrl(req),
     loggedIn: !!(req.session && req.session.userId),
+  });
+});
+
+/** 所有衣服（跨衣櫃總覽） */
+router.get('/clothes', async (req, res) => {
+  const items = await ClothingItem.find()
+    .populate('wardrobeId', 'name shortCode')
+    .sort({ createdAt: -1 })
+    .lean();
+  res.render('clothes-all', {
+    title: '所有衣服',
+    items,
+  });
+});
+
+/** 單件衣物詳情 */
+router.get('/clothes/:itemId', async (req, res) => {
+  const { itemId } = req.params;
+  if (!mongoose.Types.ObjectId.isValid(itemId)) {
+    return res.status(404).render('error', { title: '找不到', message: '無此衣物' });
+  }
+  const item = await ClothingItem.findById(itemId).populate('wardrobeId', 'name shortCode').lean();
+  if (!item) {
+    return res.status(404).render('error', { title: '找不到', message: '無此衣物或已刪除' });
+  }
+  res.render('clothes-detail', {
+    title: item.description ? item.description.slice(0, 40) : '衣物詳情',
+    item,
   });
 });
 
@@ -98,7 +124,7 @@ router.get('/w/:code', async (req, res) => {
     title: w.name,
     wardrobe: w,
     items,
-    baseUrlStr: baseUrl(req),
+    baseUrlStr: publicBaseUrl(req),
     manageHint: true,
   });
 });
@@ -129,7 +155,7 @@ router.get('/w/:code/manage', async (req, res) => {
 
   const wFull = await loadWardrobeByCode(code, true);
   const items = await ClothingItem.find({ wardrobeId: w._id }).sort({ updatedAt: -1 });
-  const listUrl = `${baseUrl(req)}/w/${code}`;
+  const listUrl = `${publicBaseUrl(req)}/w/${code}`;
   let qrDataUrl = '';
   try {
     qrDataUrl = await QRCode.toDataURL(listUrl, { width: 280, margin: 2 });
@@ -141,7 +167,7 @@ router.get('/w/:code/manage', async (req, res) => {
   const editTokenForClient = sessionAuth ? '' : token;
   const shareManageUrl =
     sessionAuth && wFull
-      ? `${baseUrl(req)}/w/${code}/manage?token=${encodeURIComponent(wFull.editToken)}`
+      ? `${publicBaseUrl(req)}/w/${code}/manage?token=${encodeURIComponent(wFull.editToken)}`
       : '';
 
   res.render('manage', {
@@ -153,7 +179,7 @@ router.get('/w/:code/manage', async (req, res) => {
     shareManageUrl,
     listUrl,
     qrDataUrl,
-    baseUrlStr: baseUrl(req),
+    baseUrlStr: publicBaseUrl(req),
   });
 });
 
@@ -161,40 +187,65 @@ router.get('/w/:code/manage', async (req, res) => {
 router.get('/w/:code/qr.png', async (req, res) => {
   const w = await Wardrobe.findOne({ shortCode: req.params.code });
   if (!w) return res.status(404).send('Not found');
-  const url = `${baseUrl(req)}/w/${req.params.code}`;
+  const url = `${publicBaseUrl(req)}/w/${req.params.code}`;
   const png = await QRCode.toBuffer(url, { type: 'png', width: 400, margin: 2 });
   res.type('png').send(png);
 });
 
-/** API：新增衣物 */
-router.post('/api/w/:code/items', upload.single('image'), assertManage, async (req, res) => {
-  try {
-    if (!req.file) {
-      return res.status(400).json({ error: '請上傳圖片' });
+/** API：新增衣物（可一次上傳多張圖，各成一筆；描述／放置位置共用） */
+router.post(
+  '/api/w/:code/items',
+  upload.array('image', MAX_FILES_PER_UPLOAD),
+  assertManage,
+  async (req, res) => {
+    const files = req.files || [];
+    if (!files.length) {
+      if (req.accepts('html')) {
+        return res.status(400).send('請至少選擇一張圖片');
+      }
+      return res.status(400).json({ error: '請至少選擇一張圖片' });
     }
-    const buf = await fs.readFile(req.file.path);
-    const imageHash = await computeAverageHash(buf);
+
     const description = (req.body.description || '').trim().slice(0, 500);
     const position = (req.body.position || '').trim().slice(0, 120);
-    const item = await ClothingItem.create({
-      wardrobeId: req.wardrobe._id,
-      description,
-      position,
-      imageFilename: req.file.filename,
-      imageHash,
-    });
-    if (req.accepts('html')) {
-      if (req.session && req.session.userId) {
-        return res.redirect(`/w/${req.params.code}/manage`);
+    const createdIds = [];
+
+    try {
+      for (const file of files) {
+        const buf = await fs.readFile(file.path);
+        const imageHash = await computeAverageHash(buf);
+        const item = await ClothingItem.create({
+          wardrobeId: req.wardrobe._id,
+          description,
+          position,
+          imageFilename: file.filename,
+          imageHash,
+        });
+        createdIds.push(item._id);
       }
-      return res.redirect(`/w/${req.params.code}/manage?token=${encodeURIComponent(req.body.editToken)}`);
+
+      if (req.accepts('html')) {
+        if (req.session && req.session.userId) {
+          return res.redirect(`/w/${req.params.code}/manage`);
+        }
+        return res.redirect(`/w/${req.params.code}/manage?token=${encodeURIComponent(req.body.editToken)}`);
+      }
+      res.json({ ok: true, count: createdIds.length, itemIds: createdIds });
+    } catch (err) {
+      console.error(err);
+      if (createdIds.length) {
+        await ClothingItem.deleteMany({ _id: { $in: createdIds } });
+      }
+      for (const f of files) {
+        fs.unlink(f.path).catch(() => {});
+      }
+      if (req.accepts('html')) {
+        return res.status(500).send(err.message || '上傳失敗');
+      }
+      return res.status(500).json({ error: err.message || '伺服器錯誤' });
     }
-    res.json({ ok: true, item });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ error: err.message || '伺服器錯誤' });
   }
-});
+);
 
 /** API：更新衣物（multipart：editToken、description、position、可選 image） */
 router.put(
