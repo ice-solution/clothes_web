@@ -1,0 +1,111 @@
+<%- include('partials/head') %>
+  <header class="mb-8">
+    <div class="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+      <a href="/" class="text-indigo-300 hover:text-indigo-200">← 首頁</a>
+      <a href="/wardrobes" class="text-slate-400 hover:text-slate-300">全部衣櫃</a>
+    </div>
+    <h1 class="mt-3 text-2xl font-bold text-white sm:text-3xl"><%= wardrobe.name %></h1>
+    <p class="mt-1 text-sm text-slate-400">掃描衣櫃 QR 後會開啟此頁，顯示已記錄的衣物。</p>
+  </header>
+
+  <section class="mb-10 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+    <h2 class="text-sm font-semibold uppercase tracking-wide text-slate-400">以照片找相近衣物</h2>
+    <p class="mt-1 text-xs text-slate-500">上傳一張照片，系統會在此衣櫃內比對視覺相似度（顏色／紋理概況）。</p>
+    <form id="similar-form" class="mt-4 flex flex-col gap-3 sm:flex-row sm:items-end">
+      <div class="flex-1">
+        <input type="file" id="query" name="query" accept="image/*" required
+          class="block w-full text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white hover:file:bg-indigo-400" />
+      </div>
+      <button type="submit" id="similar-btn"
+        class="rounded-xl bg-fuchsia-600 px-5 py-2 text-sm font-semibold text-white hover:bg-fuchsia-500 disabled:opacity-50">
+        搜尋相似
+      </button>
+    </form>
+    <div id="similar-status" class="mt-3 hidden text-sm text-slate-400"></div>
+    <div id="similar-results" class="mt-4 hidden grid gap-3 sm:grid-cols-2"></div>
+  </section>
+
+  <section>
+    <h2 class="mb-4 text-lg font-semibold text-white">衣櫃內衣物（<%= items.length %>）</h2>
+    <% if (items.length === 0) { %>
+      <p class="rounded-xl border border-dashed border-white/15 bg-slate-900/50 px-4 py-8 text-center text-slate-500">尚無衣物，請由管理員在管理頁新增。</p>
+    <% } else { %>
+      <ul class="grid gap-4 sm:grid-cols-2">
+        <% items.forEach(function (item) { %>
+          <li class="overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60 shadow-lg">
+            <div class="aspect-square w-full overflow-hidden bg-slate-800">
+              <img src="/uploads/<%= item.imageFilename %>" alt="" class="h-full w-full object-cover" loading="lazy" />
+            </div>
+            <div class="p-4">
+              <% if (item.position) { %>
+                <p class="text-xs font-medium text-indigo-300/90"><%= item.position %></p>
+              <% } %>
+              <p class="mt-1 text-sm text-slate-200 line-clamp-4"><%= item.description || '（無描述）' %></p>
+            </div>
+          </li>
+        <% }); %>
+      </ul>
+    <% } %>
+  </section>
+
+  <script>
+    (function () {
+      const code = <%- JSON.stringify(wardrobe.shortCode) %>;
+      const form = document.getElementById('similar-form');
+      const statusEl = document.getElementById('similar-status');
+      const resultsEl = document.getElementById('similar-results');
+      const btn = document.getElementById('similar-btn');
+
+      form.addEventListener('submit', async function (e) {
+        e.preventDefault();
+        const input = document.getElementById('query');
+        if (!input.files || !input.files[0]) return;
+        const fd = new FormData();
+        fd.append('query', input.files[0]);
+        statusEl.classList.remove('hidden');
+        resultsEl.classList.add('hidden');
+        statusEl.textContent = '分析中…';
+        btn.disabled = true;
+        try {
+          const res = await fetch('/api/w/' + encodeURIComponent(code) + '/similar', {
+            method: 'POST',
+            body: fd,
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || '搜尋失敗');
+          statusEl.textContent = '找到 ' + (data.results && data.results.length ? data.results.length : 0) + ' 筆相近結果（依相似度排序）';
+          resultsEl.innerHTML = '';
+          if (!data.results || !data.results.length) {
+            resultsEl.classList.remove('hidden');
+            resultsEl.innerHTML = '<p class="text-sm text-slate-500 col-span-full">沒有可比對的衣物，或相似度皆偏低。</p>';
+            return;
+          }
+          data.results.forEach(function (r) {
+            const card = document.createElement('article');
+            card.className = 'overflow-hidden rounded-xl border border-white/10 bg-slate-900/80';
+            card.innerHTML =
+              '<div class="flex gap-3 p-3">' +
+              '<div class="h-20 w-20 shrink-0 overflow-hidden rounded-lg bg-slate-800"><img src="' + r.imageUrl + '" class="h-full w-full object-cover" alt=""/></div>' +
+              '<div class="min-w-0 flex-1">' +
+              (r.position ? '<p class="text-xs text-indigo-300">' + escapeHtml(r.position) + '</p>' : '') +
+              '<p class="mt-0.5 text-sm text-slate-200 line-clamp-2">' + escapeHtml(r.description || '（無描述）') + '</p>' +
+              '<p class="mt-1 text-xs text-slate-500">距離 ' + r.distance + ' · 分數 ' + r.score + '</p>' +
+              '</div></div>';
+            resultsEl.appendChild(card);
+          });
+          resultsEl.classList.remove('hidden');
+        } catch (err) {
+          statusEl.textContent = err.message || '錯誤';
+        } finally {
+          btn.disabled = false;
+        }
+      });
+
+      function escapeHtml(s) {
+        const d = document.createElement('div');
+        d.textContent = s;
+        return d.innerHTML;
+      }
+    })();
+  </script>
+<%- include('partials/foot') %>

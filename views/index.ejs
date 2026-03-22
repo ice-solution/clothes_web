@@ -1,0 +1,30 @@
+<%- include('partials/head') %>
+  <header class="mb-10 text-center">
+    <p class="text-sm font-medium uppercase tracking-widest text-indigo-300/90">Closet QR</p>
+    <h1 class="mt-2 text-3xl font-bold tracking-tight text-white sm:text-4xl">把衣櫃裝進 QR 裡</h1>
+    <p class="mx-auto mt-3 max-w-lg text-slate-400">建立專屬衣櫃、上傳衣物照片與描述、掃碼即可瀏覽；還能用照片找出衣櫃裡最相近的單品。</p>
+    <p class="mt-5">
+      <a href="/wardrobes" class="text-sm font-medium text-indigo-300 underline-offset-4 hover:text-indigo-200 hover:underline">瀏覽全部衣櫃</a>
+    </p>
+  </header>
+
+  <section class="rounded-2xl border border-white/10 bg-white/5 p-6 shadow-xl backdrop-blur">
+    <h2 class="text-lg font-semibold text-white">建立新衣櫃</h2>
+    <p class="mt-1 text-sm text-slate-400">建立後會顯示管理頁與 QR 碼，請妥善保存管理連結。</p>
+    <form action="/wardrobes" method="post" class="mt-6 flex flex-col gap-4 sm:flex-row sm:items-end">
+      <div class="flex-1">
+        <label for="name" class="block text-sm font-medium text-slate-300">衣櫃名稱（選填）</label>
+        <input type="text" id="name" name="name" maxlength="80" placeholder="例如：主臥衣櫃"
+          class="mt-1.5 w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2.5 text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+      </div>
+      <button type="submit"
+        class="inline-flex items-center justify-center rounded-xl bg-indigo-500 px-6 py-2.5 text-sm font-semibold text-white shadow-lg shadow-indigo-500/25 transition hover:bg-indigo-400">
+        建立衣櫃
+      </button>
+    </form>
+  </section>
+
+  <p class="mt-8 text-center text-xs text-slate-500">
+    技術棧：Express · MongoDB · Tailwind CSS · 圖像平均雜湊相似搜尋
+  </p>
+<%- include('partials/foot') %>
