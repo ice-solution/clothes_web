@@ -4,9 +4,42 @@
       <a href="/" class="text-indigo-300 hover:text-indigo-200">← 首頁</a>
       <a href="/wardrobes" class="text-slate-400 hover:text-slate-300">全部衣櫃</a>
     </div>
-    <h1 class="mt-3 text-2xl font-bold text-white sm:text-3xl">管理 · <%= wardrobe.name %></h1>
+    <h1 class="mt-3 text-2xl font-bold text-white sm:text-3xl" id="manage-wardrobe-title">管理 · <%= wardrobe.name %></h1>
     <p class="mt-1 text-sm text-slate-400">請勿分享下方「管理連結」；QR 碼僅用於瀏覽衣櫃內容。</p>
   </header>
+
+  <section class="mb-10 rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
+    <h2 class="text-lg font-semibold text-white">衣櫃設定</h2>
+    <p class="mt-1 text-sm text-slate-400">更改衣櫃顯示名稱、上傳或更換封面圖（公開頁與列表會顯示）。</p>
+    <!-- Grid 避免 flex 子項被壓成極窄導致文字直排；中屏以上：左預覽固定寬、右表單自適應 -->
+    <div class="mt-6 grid w-full grid-cols-1 gap-6 md:grid-cols-[11rem_minmax(0,1fr)] md:gap-8 md:items-start">
+      <div id="wardrobe-cover-preview" class="relative mx-auto aspect-square w-full max-w-[11rem] overflow-hidden rounded-xl border border-white/10 bg-slate-800 md:mx-0 md:max-w-none md:w-[11rem]">
+        <% if (wardrobe.coverImageFilename) { %>
+          <img src="/uploads/<%= wardrobe.coverImageFilename %>" alt="" class="h-full w-full object-cover" />
+        <% } else { %>
+          <div class="flex h-full min-h-[8rem] w-full items-center justify-center px-2 text-center text-xs leading-relaxed text-slate-500">尚無封面</div>
+        <% } %>
+      </div>
+      <div class="w-full min-w-0 space-y-4">
+        <div class="min-w-0">
+          <label for="wardrobe-name" class="mb-1 block text-sm font-medium text-slate-300">衣櫃名稱</label>
+          <input type="text" id="wardrobe-name" maxlength="80" value="<%= wardrobe.name %>"
+            class="box-border w-full max-w-full rounded-xl border border-white/10 bg-slate-900/80 px-4 py-2.5 text-left text-base text-white placeholder:text-slate-500 focus:border-indigo-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40" />
+        </div>
+        <div class="min-w-0">
+          <label for="wardrobe-cover" class="mb-1 block text-sm font-medium text-slate-300">封面圖片（選填）</label>
+          <input type="file" id="wardrobe-cover" accept="image/*"
+            class="box-border block w-full max-w-full min-w-0 text-sm text-slate-300 file:mr-3 file:rounded-lg file:border-0 file:bg-indigo-500 file:px-4 file:py-2 file:text-sm file:font-medium file:text-white" />
+          <p class="mt-2 text-xs leading-relaxed text-slate-500">上傳新圖會取代舊封面。</p>
+        </div>
+        <div class="flex flex-wrap items-center gap-3 pt-1">
+          <button type="button" id="wardrobe-save-btn"
+            class="shrink-0 rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-semibold text-white hover:bg-indigo-500">儲存衣櫃設定</button>
+          <span id="wardrobe-save-msg" class="hidden text-sm text-emerald-400"></span>
+        </div>
+      </div>
+    </div>
+  </section>
 
   <div class="grid gap-8 lg:grid-cols-2">
     <section class="rounded-2xl border border-white/10 bg-white/5 p-6 backdrop-blur">
@@ -111,6 +144,47 @@
       const code = <%- JSON.stringify(wardrobe.shortCode) %>;
       const token = <%- JSON.stringify(editToken || '') %>;
       const sessionAuth = <%- JSON.stringify(typeof sessionAuth !== 'undefined' && sessionAuth) %>;
+
+      document.getElementById('wardrobe-save-btn').addEventListener('click', async function () {
+        const msg = document.getElementById('wardrobe-save-msg');
+        const nameInput = document.getElementById('wardrobe-name');
+        const fileInput = document.getElementById('wardrobe-cover');
+        const preview = document.getElementById('wardrobe-cover-preview');
+        const titleEl = document.getElementById('manage-wardrobe-title');
+        msg.classList.add('hidden');
+        const fd = new FormData();
+        if (!sessionAuth && token) fd.append('editToken', token);
+        fd.append('name', nameInput.value);
+        if (fileInput.files && fileInput.files[0]) fd.append('cover', fileInput.files[0]);
+        try {
+          const res = await fetch('/api/w/' + encodeURIComponent(code) + '/wardrobe', {
+            method: 'PUT',
+            credentials: 'same-origin',
+            body: fd,
+          });
+          const data = await res.json();
+          if (!res.ok) throw new Error(data.error || '儲存失敗');
+          msg.textContent = '已儲存';
+          msg.classList.remove('hidden');
+          msg.classList.remove('text-red-400');
+          msg.classList.add('text-emerald-400');
+          if (titleEl) titleEl.textContent = '管理 · ' + (data.name || nameInput.value);
+          if (data.coverImageFilename && preview) {
+            preview.innerHTML = '';
+            var im = document.createElement('img');
+            im.src = '/uploads/' + data.coverImageFilename;
+            im.alt = '';
+            im.className = 'h-full w-full object-cover';
+            preview.appendChild(im);
+          }
+          fileInput.value = '';
+        } catch (e) {
+          msg.textContent = e.message || '錯誤';
+          msg.classList.remove('hidden');
+          msg.classList.remove('text-emerald-400');
+          msg.classList.add('text-red-400');
+        }
+      });
 
       document.querySelectorAll('[data-item-id]').forEach(function (row) {
         const id = row.getAttribute('data-item-id');

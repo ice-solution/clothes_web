@@ -35,12 +35,27 @@
         <tbody class="divide-y divide-white/5">
           <% wardrobes.forEach(function (w) { %>
             <tr class="align-middle hover:bg-white/[0.03]">
-              <td class="py-5 pl-4 pr-4 text-left font-medium sm:pl-5">
-                <a href="<%= typeof loggedIn !== 'undefined' && loggedIn ? '/w/' + w.shortCode + '/manage' : '/w/' + w.shortCode %>"
-                  data-manage-code="<%= w.shortCode %>"
-                  class="wardrobe-name-link line-clamp-2 text-indigo-200 underline-offset-2 hover:text-white hover:underline">
-                  <%= w.name || '（未命名）' %>
-                </a>
+              <td class="py-4 pl-4 pr-4 text-left font-medium sm:py-5 sm:pl-5">
+                <div class="flex items-center gap-3 sm:gap-4">
+                  <% if (w.coverImageFilename) { %>
+                    <button type="button"
+                      class="wardrobe-cover-zoom group relative h-16 w-16 shrink-0 overflow-hidden rounded-xl border border-white/15 bg-slate-800 shadow-md ring-0 transition hover:ring-2 hover:ring-indigo-400/60 focus:outline-none focus:ring-2 focus:ring-indigo-400 sm:h-20 sm:w-20"
+                      data-lightbox-src="/uploads/<%= w.coverImageFilename %>"
+                      data-lightbox-caption="<%= encodeURIComponent(w.name || '衣櫃') %>"
+                      title="點擊放大封面"
+                      aria-label="放大封面預覽">
+                      <img src="/uploads/<%= w.coverImageFilename %>" alt="" class="h-full w-full object-cover transition group-hover:scale-105" />
+                      <span class="pointer-events-none absolute inset-0 flex items-center justify-center bg-black/0 text-[10px] font-medium text-white opacity-0 transition group-hover:bg-black/35 group-hover:opacity-100">放大</span>
+                    </button>
+                  <% } else { %>
+                    <div class="flex h-16 w-16 shrink-0 items-center justify-center rounded-xl border border-dashed border-white/10 bg-slate-900/60 text-[10px] text-slate-600 sm:h-20 sm:w-20" title="尚未上傳封面">無圖</div>
+                  <% } %>
+                  <a href="<%= typeof loggedIn !== 'undefined' && loggedIn ? '/w/' + w.shortCode + '/manage' : '/w/' + w.shortCode %>"
+                    data-manage-code="<%= w.shortCode %>"
+                    class="wardrobe-name-link line-clamp-2 min-w-0 flex-1 text-indigo-200 underline-offset-2 hover:text-white hover:underline">
+                    <%= w.name || '（未命名）' %>
+                  </a>
+                </div>
               </td>
               <td class="max-w-0 px-4 py-5 text-left">
                 <span class="block truncate font-mono text-xs text-slate-400" title="<%= w.shortCode %>"><%= w.shortCode %></span>
@@ -67,6 +82,53 @@
     <p class="mt-4 px-1 text-center text-xs leading-relaxed text-slate-500 sm:px-0">
       公開網址範例：<span class="break-all text-slate-400"><%= baseUrlStr %>/w/&lt;識別碼&gt;</span>
     </p>
+
+    <dialog id="wardrobe-cover-lightbox" class="max-h-[90vh] max-w-[min(96vw,56rem)] rounded-2xl border border-white/10 bg-slate-950 p-0 text-slate-100 shadow-2xl backdrop:bg-black/80 open:flex open:flex-col">
+      <div class="flex items-center justify-between gap-2 border-b border-white/10 px-4 py-3">
+        <p id="wardrobe-cover-lightbox-caption" class="min-w-0 flex-1 truncate text-sm text-slate-300"></p>
+        <button type="button" id="wardrobe-cover-lightbox-close" class="shrink-0 rounded-lg bg-white/10 px-3 py-1.5 text-sm hover:bg-white/20">關閉</button>
+      </div>
+      <div class="flex max-h-[calc(90vh-4rem)] items-center justify-center overflow-auto p-4">
+        <img id="wardrobe-cover-lightbox-img" src="" alt="" class="max-h-[min(75vh,720px)] w-auto max-w-full object-contain" />
+      </div>
+    </dialog>
+
+    <script>
+      (function () {
+        var dlg = document.getElementById('wardrobe-cover-lightbox');
+        var img = document.getElementById('wardrobe-cover-lightbox-img');
+        var cap = document.getElementById('wardrobe-cover-lightbox-caption');
+        var btnClose = document.getElementById('wardrobe-cover-lightbox-close');
+        if (dlg && img && cap && btnClose) {
+          document.querySelectorAll('.wardrobe-cover-zoom').forEach(function (btn) {
+            btn.addEventListener('click', function (e) {
+              e.preventDefault();
+              e.stopPropagation();
+              var src = btn.getAttribute('data-lightbox-src');
+              var cRaw = btn.getAttribute('data-lightbox-caption') || '';
+              var c = cRaw;
+              try {
+                c = decodeURIComponent(cRaw);
+              } catch (err) {}
+              if (!src) return;
+              img.src = src;
+              img.alt = c;
+              cap.textContent = c;
+              dlg.showModal();
+            });
+          });
+          btnClose.addEventListener('click', function () {
+            dlg.close();
+          });
+          dlg.addEventListener('click', function (e) {
+            if (e.target === dlg) dlg.close();
+          });
+          document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && dlg.open) dlg.close();
+          });
+        }
+      })();
+    </script>
     <script>
       (function () {
         var KEY = 'clothesWardrobeManageTokens';

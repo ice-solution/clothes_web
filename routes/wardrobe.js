@@ -55,7 +55,7 @@ router.get('/', (_req, res) => {
 router.get('/wardrobes', async (req, res) => {
   const wardrobes = await Wardrobe.find()
     .sort({ createdAt: -1 })
-    .select('name shortCode createdAt')
+    .select('name shortCode createdAt coverImageFilename')
     .lean();
   const ids = wardrobes.map((w) => w._id);
   let countMap = new Map();
@@ -182,6 +182,34 @@ router.get('/w/:code/manage', async (req, res) => {
     baseUrlStr: publicBaseUrl(req),
   });
 });
+
+/** 更新衣櫃名稱與／或封面圖 */
+router.put(
+  '/api/w/:code/wardrobe',
+  upload.single('cover'),
+  assertManage,
+  async (req, res) => {
+    try {
+      const w = req.wardrobe;
+      if (req.body.name !== undefined) {
+        const n = String(req.body.name).trim().slice(0, 80);
+        w.name = n || '我的衣櫃';
+      }
+      if (req.file) {
+        if (w.coverImageFilename) {
+          const oldPath = path.join(__dirname, '..', 'public', 'uploads', w.coverImageFilename);
+          fs.unlink(oldPath).catch(() => {});
+        }
+        w.coverImageFilename = req.file.filename;
+      }
+      await w.save();
+      res.json({ ok: true, name: w.name, coverImageFilename: w.coverImageFilename || '' });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: err.message || '儲存失敗' });
+    }
+  }
+);
 
 /** QR 圖片（公開，方便下載） */
 router.get('/w/:code/qr.png', async (req, res) => {

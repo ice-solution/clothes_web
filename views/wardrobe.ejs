@@ -4,7 +4,12 @@
       <a href="/" class="text-indigo-300 hover:text-indigo-200">← 首頁</a>
       <a href="/wardrobes" class="text-slate-400 hover:text-slate-300">全部衣櫃</a>
     </div>
-    <h1 class="mt-3 text-2xl font-bold text-white sm:text-3xl"><%= wardrobe.name %></h1>
+    <% if (wardrobe.coverImageFilename) { %>
+      <div class="mt-4 overflow-hidden rounded-2xl border border-white/10 bg-slate-900/60">
+        <img src="/uploads/<%= wardrobe.coverImageFilename %>" alt="" class="max-h-72 w-full object-cover object-center sm:max-h-80" />
+      </div>
+    <% } %>
+    <h1 class="mt-4 text-2xl font-bold text-white sm:mt-6 sm:text-3xl"><%= wardrobe.name %></h1>
     <p class="mt-1 text-sm text-slate-400">掃描衣櫃 QR 後會開啟此頁，顯示已記錄的衣物。</p>
   </header>
 
